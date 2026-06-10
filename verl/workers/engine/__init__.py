@@ -37,6 +37,16 @@ except ImportError:
     VeOmniEngine = None
     VeOmniEngineWithLMHead = None
 
+
+try:
+    from .hyper import HyperEngine, HyperEngineWithLMHead, HyperEngineWithValueHead
+
+    __all__ += ["HyperEngine", "HyperEngineWithLMHead", "HyperEngineWithValueHead"]
+except ImportError:
+    HyperEngine = None
+    HyperEngineWithLMHead = None
+    HyperEngineWithValueHead = None
+
 # Mindspeed must be imported before Megatron to ensure the related monkey patches take effect as expected
 try:
     from .mindspeed import MindspeedEngineWithLMHead

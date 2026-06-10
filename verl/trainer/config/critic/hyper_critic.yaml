@@ -1,0 +1,46 @@
+# defaults specify the default config from each component
+defaults:
+
+  # fsdp-compatible optimizer config
+  - ../optim@optim: fsdp
+
+  # HyperParallel engine config
+  - ../engine@model.fsdp_config: hyper
+
+  # base critic config
+  - critic
+
+  # load local overrides last
+  - _self_
+
+# Required when using verl.utils.omega_conf_to_dataclass to instantiate dataclass configs
+_target_: verl.workers.config.FSDPCriticConfig
+
+# HyperParallel HSDP strategy
+strategy: hyper
+
+# model config for the critic
+model:
+  _target_: verl.workers.config.FSDPCriticModelCfg
+  use_shm: False
+  enable_gradient_checkpointing: True
+  enable_activation_offload: False
+  use_remove_padding: False
+  lora_rank: 0
+  lora_alpha: 16
+  target_modules: all-linear
+  tiled_mlp:
+    enabled: False
+    num_shards: 4
+
+# Forward-only batch size during inference (global)
+forward_micro_batch_size: ${oc.select:.ppo_micro_batch_size,null}
+
+# Forward-only batch size during inference (per GPU)
+forward_micro_batch_size_per_gpu: ${oc.select:.ppo_micro_batch_size_per_gpu,null}
+
+# Sequence parallelism size for Ulysses-style model parallelism
+ulysses_sequence_parallel_size: 1
+
+# Gradient clipping for critic updates
+grad_clip: 1.0

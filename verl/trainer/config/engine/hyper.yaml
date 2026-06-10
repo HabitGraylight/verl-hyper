@@ -1,0 +1,81 @@
+# Target class for this configuration
+_target_: verl.workers.config.HyperEngineConfig
+
+# Whether to offload model parameters to CPU. HyperParallel owns actual residency.
+param_offload: false
+
+# Whether to offload optimizer state to CPU. Not supported for HyperParallel smoke tests.
+optimizer_offload: false
+
+# Whether to offload grad. Not supported for HyperParallel smoke tests.
+grad_offload: false
+
+# HyperParallel CPU offload policy.
+offload_policy: false
+
+# Reshard after forward pass to reduce memory footprint.
+reshard_after_forward: true
+
+# Kept for compatibility with FSDP-style actor configs.
+fsdp_size: -1
+
+# Kept for compatibility; HyperParallel controls prefetch through HSDP APIs.
+forward_prefetch: false
+
+# Model dtype used to initialize the transformers model.
+model_dtype: bfloat16
+
+# Kept for compatibility with FSDP1 configs.
+use_orig_params: false
+
+# Random seed for reproducibility.
+seed: 42
+
+# Whether to enable full determinism for distributed training.
+full_determinism: false
+
+# Ulysses sequence parallel size.
+ulysses_sequence_parallel_size: 1
+
+# Whether to compute entropy from logits with chunking.
+entropy_from_logits_with_chunking: false
+
+# Whether to use torch compile.
+use_torch_compile: true
+
+# Whether to recompute entropy.
+entropy_checkpointing: false
+
+# Whether this engine is forward only.
+forward_only: false
+
+# HyperParallel backend selector.
+strategy: hyper
+
+# Mixed precision training param dtype.
+dtype: bfloat16
+
+# HyperParallel communication fusion.
+comm_fusion: false
+
+# HyperParallel zero-copy path for communication fusion.
+comm_fusion_zero_copy: null
+
+# Only wrap the root module with HSDP.
+wrap_root_only: true
+
+# Store gradients on fp32 main grad when using mixed precision.
+apply_grad_on_fp32_main_grad: false
+
+# QAT configuration, currently inherited but not supported for the hyper smoke path.
+qat:
+  _target_: verl.workers.config.QATEngineConfig
+  enable: false
+  mode: "w4a16"
+  group_size: 16
+  ignore_patterns:
+    - "lm_head"
+    - "embed_tokens"
+    - "re:.*mlp.gate$"
+  activation_observer: "static_minmax"
+  quantization_config_path: null

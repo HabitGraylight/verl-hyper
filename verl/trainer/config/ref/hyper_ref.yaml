@@ -1,0 +1,32 @@
+# defaults specify the default config from each component
+defaults:
+
+  # base ref config
+  - ref
+
+  # HyperParallel engine config
+  - ../engine@fsdp_config: hyper
+
+  # load local overrides last
+  - _self_
+
+# Target class for this configuration
+_target_: verl.workers.config.FSDPActorConfig
+
+# HyperParallel HSDP strategy
+strategy: hyper
+
+# hyper config
+fsdp_config:
+
+  # ref model is forward only
+  forward_only: True
+
+# sequence parallel size
+ulysses_sequence_parallel_size: ${oc.select:actor_rollout_ref.actor.ulysses_sequence_parallel_size,1}
+
+# calculate entropy with chunking to reduce memory peak
+entropy_from_logits_with_chunking: False
+
+# recompute entropy
+entropy_checkpointing: False

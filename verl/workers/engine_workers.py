@@ -320,15 +320,21 @@ class TrainingWorker(Worker, DistProfilerExtension):
             use_fused_kernels=self.engine_config.use_fused_kernels,
         )
 
+        default_target = data.batch if hasattr(data, "batch") and hasattr(data.batch, "keys") else data
+        if hasattr(default_target, "keys"):
+            data_keys = set(default_target.keys())
+        else:
+            data_keys = set()
+
         for key, val in default_keys.items():
-            if key not in data.keys():
-                tu.assign_non_tensor(data, **{key: val})
+            if key not in data_keys:
+                tu.assign_non_tensor(default_target, **{key: val})
 
         with (
             self.engine.train_mode(disable_auto_offload=disable_auto_offload),
             Timer(name="train_batch", logger=None) as timer,
         ):
-            output = self.engine.train_batch(data, loss_function=self.loss_fn)
+            output = self.engine.train_batch(default_target, loss_function=self.loss_fn)
             # containing loss, model_output and metrics
             # for training, we only care about loss and metrics
         delta_time = timer.last
@@ -374,9 +380,15 @@ class TrainingWorker(Worker, DistProfilerExtension):
             use_fused_kernels=self.engine_config.use_fused_kernels,
         )
 
+        default_target = data.batch if hasattr(data, "batch") and hasattr(data.batch, "keys") else data
+        if hasattr(default_target, "keys"):
+            data_keys = set(default_target.keys())
+        else:
+            data_keys = set()
+
         for key, val in default_keys.items():
-            if key not in data.keys():
-                tu.assign_non_tensor(data, **{key: val})
+            if key not in data_keys:
+                tu.assign_non_tensor(default_target, **{key: val})
 
         # for sft training, we need to compute loss in eval
         loss_function = self.loss_fn if compute_loss else None
@@ -387,7 +399,7 @@ class TrainingWorker(Worker, DistProfilerExtension):
         ):
             adapter_ctx = self.engine.disable_adapter() if no_lora_adapter else nullcontext()
             with adapter_ctx:
-                output = self.engine.infer_batch(data, loss_function=loss_function)
+                output = self.engine.infer_batch(default_target, loss_function=loss_function)
         delta_time = timer.last
 
         if self.engine.is_mp_src_rank_with_outputs():
@@ -597,6 +609,19 @@ class ActorRolloutRefWorker(Worker, DistProfilerExtension):
     @DistProfiler.annotate(color="blue", role="actor_compute_log_prob")
     @_with_routing_replay_flag(enabled=True)
     def compute_log_prob(self, data: TensorDict) -> TensorDict:
+        target = data.batch if hasattr(data, "batch") and hasattr(data.batch, "keys") else data
+        target_keys = set(target.keys()) if hasattr(target, "keys") else set()
+        metadata = {}
+        if "compute_loss" not in target_keys:
+            metadata["compute_loss"] = False
+        if "calculate_entropy" not in target_keys:
+            metadata["calculate_entropy"] = True
+        if "temperature" not in target_keys:
+            metadata["temperature"] = 1.0
+        if metadata:
+            tu.assign_non_tensor(target, **metadata)
+        if "loss_mask" not in target_keys and "response_mask" in target_keys:
+            target["loss_mask"] = target["response_mask"]
         output = self.actor.infer_batch(data)
 
         return output.cpu() if output is not None else None

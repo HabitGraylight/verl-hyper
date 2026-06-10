@@ -128,7 +128,7 @@ class TaskRunner:
         use_legacy_worker_impl = config.trainer.get("use_legacy_worker_impl", "auto")
 
         # use new model engine implementation
-        if use_legacy_worker_impl == "disable":
+        if use_legacy_worker_impl == "disable" or config.actor_rollout_ref.actor.strategy == "hyper":
             from verl.workers.engine_workers import ActorRolloutRefWorker
 
             actor_rollout_cls = ActorRolloutRefWorker
@@ -196,8 +196,8 @@ class TaskRunner:
             # TODO: switch this to TrainingWorker as well
             from verl.workers.megatron_workers import CriticWorker
 
-        elif config.critic.strategy == "veomni" or config.critic.strategy == "torchtitan":
-            if use_legacy_worker_impl == "disable":
+        elif config.critic.strategy in {"veomni", "torchtitan", "hyper"}:
+            if use_legacy_worker_impl == "disable" or config.critic.strategy == "hyper":
                 from verl.workers.engine_workers import TrainingWorker
 
                 CriticWorker = TrainingWorker

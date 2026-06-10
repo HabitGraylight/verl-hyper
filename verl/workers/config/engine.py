@@ -25,6 +25,7 @@ from .optimizer import OptimizerConfig
 
 __all__ = [
     "FSDPEngineConfig",
+    "HyperEngineConfig",
     "McoreEngineConfig",
     "TrainingWorkerConfig",
     "TorchtitanEngineConfig",
@@ -248,6 +249,28 @@ class FSDPEngineConfig(EngineConfig):
     def __post_init__(self):
         super().__post_init__()
         assert self.strategy in ["fsdp", "fsdp2"], f"strategy {self.strategy} not supported"
+
+
+
+
+@dataclass
+class HyperEngineConfig(FSDPEngineConfig):
+    """Configuration for HyperParallel HSDP.
+
+    This config mirrors FSDP for verl compatibility while exposing the small
+    set of HyperParallel-specific knobs needed by ``fully_shard``.
+    """
+
+    strategy: str = "hyper"
+    comm_fusion: bool = False
+    comm_fusion_zero_copy: Optional[bool] = None
+    wrap_root_only: bool = True
+    apply_grad_on_fp32_main_grad: bool = False
+
+    def __post_init__(self):
+        EngineConfig.__post_init__(self)
+        assert self.strategy == "hyper", f"strategy {self.strategy} not supported"
+        assert self.dtype in ["bfloat16", "float16"], f"dtype {self.dtype} not supported"
 
 
 @dataclass

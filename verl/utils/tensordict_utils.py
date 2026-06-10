@@ -693,6 +693,14 @@ def pop(tensordict: TensorDict, key: str, default=None) -> Any:
         False
     """
     _sentinel = object()
+    if hasattr(tensordict, "keys"):
+        contains_key = key in tensordict.keys()
+    elif hasattr(tensordict, "batch") and hasattr(tensordict.batch, "keys"):
+        contains_key = key in tensordict.batch.keys()
+    else:
+        contains_key = True
+    if not contains_key:
+        return default
     output = tensordict.pop(key, _sentinel)
     if output is _sentinel:
         return default
