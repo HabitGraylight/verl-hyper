@@ -47,6 +47,76 @@ verl is fast with:
 
 </p>
 
+## HyperParallel 后端说明
+
+这个 fork 在 verl 原有 FSDP/DP 和 Megatron 后端之外，新增了实验性的 `hyper` 训练后端，用于验证 HyperParallel HSDP 是否可以作为 RL 训练 engine 接入 verl。HyperParallel 源码作为 git submodule 放在 `third_party/hyper-parallel`。
+
+### 克隆和初始化
+
+推荐直接递归克隆：
+
+```bash
+git clone --recurse-submodules https://github.com/HabitGraylight/verl-hyper.git
+cd verl-hyper
+```
+
+如果已经普通 clone 了仓库，补初始化 submodule：
+
+```bash
+git submodule update --init --recursive third_party/hyper-parallel
+```
+
+运行时默认优先从 `third_party/hyper-parallel` 导入 `hyper_parallel`；如果环境中已经安装了 `hyper_parallel`，则优先使用已安装版本。也可以通过 `HYPER_PARALLEL_PATH` 覆盖脚本中的源码路径。
+
+### 主要改动
+
+本 fork 做了以下适配：
+
+- 新增 `HyperEngineConfig`，在 verl 配置系统中注册 `strategy=hyper`。
+- 新增 `verl/workers/engine/hyper/`，复用 FSDP HF-model engine 表面接口，并把模型包装替换成 HyperParallel `fully_shard()`。
+- 在 `main_ppo.py` 中把 `strategy=hyper` 路由到新的 engine worker。
+- 修复 engine worker 路径中 `DataProto` 和 `TensorDict` 的兼容问题。
+- 新增 `HyperCheckpointManager`，支持实验性的 Hyper model/optimizer/scheduler/RNG checkpoint 保存和加载路径。
+- 新增 Hyper actor/ref/critic/model_engine Hydra 配置。
+- 新增 Qwen3 0.6B + GSM8K 的 Hyper GRPO smoke 脚本。
+
+更详细的设计说明、已验证指标和当前限制见：
+
+- [中文说明](docs/hyper_parallel_verl_integration.zh.md)
+- [English notes](docs/hyper_parallel_verl_integration.md)
+
+### 使用 Hyper 后端运行 GRPO
+
+准备好模型和 GSM8K parquet 后，可以使用 smoke 脚本：
+
+```bash
+CUDA_VISIBLE_DEVICES=0 WANDB_MODE=disabled \
+MODEL_PATH=/path/to/qwen3-0.6b \
+TRAIN_DATA=/path/to/gsm8k/train.parquet \
+TEST_DATA=/path/to/gsm8k/test.parquet \
+bash run_qwen3_0.6b_grpo_gsm8k_hyper.sh
+```
+
+也可以直接通过 Hydra 选择后端：
+
+```bash
+python3 -m verl.trainer.main_ppo \
+  model_engine=hyper \
+  algorithm.adv_estimator=grpo \
+  actor_rollout_ref.actor.strategy=hyper \
+  actor_rollout_ref.ref.strategy=hyper \
+  trainer.use_legacy_worker_impl=disable
+```
+
+`model_engine=hyper` 会加载 `verl/trainer/config/model_engine/hyper.yaml`，其中 actor/ref/critic 的 engine config 都指向 HyperParallel。
+
+### 当前限制
+
+- 单卡只能验证功能路径和 world size 1 的退化路径，不能验证真实分布式并行收益。
+- rollout 权重同步目前仍通过 full state dict 完成，大模型多卡场景需要 HyperParallel 提供 streamed 参数导出 API。
+- checkpoint manager 已支持单卡保存验证，但 resume、多卡 checkpoint 和 world size 变化仍需更多验证。
+- 当前接入重点是 HSDP/FSDP-style drop-in；Hyper TP/PP/CP 尚未完整暴露到 verl resource pool 和 Hydra 配置。
+
 ## News
 
 - [2026/01] verl has been migrated to the [verl-project](https://github.com/verl-project)

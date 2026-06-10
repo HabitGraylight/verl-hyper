@@ -45,7 +45,7 @@ logger.setLevel(os.getenv("VERL_LOGGING_LEVEL", "WARN"))
 
 
 def _ensure_hyper_parallel_importable() -> None:
-    """Prefer an installed hyper_parallel, fallback to the sibling checkout."""
+    """Prefer installed hyper_parallel, then the vendored submodule."""
     os.environ.setdefault("HYPER_PARALLEL_PLATFORM", "torch")
     try:
         import hyper_parallel  # noqa: F401
@@ -55,9 +55,14 @@ def _ensure_hyper_parallel_importable() -> None:
         pass
 
     repo_root = Path(__file__).resolve().parents[5]
-    sibling = repo_root.parent / "hyper-parallel"
-    if sibling.exists():
-        sys.path.insert(0, str(sibling))
+    candidates = (
+        repo_root / "third_party" / "hyper-parallel",
+        repo_root.parent / "hyper-parallel",
+    )
+    for candidate in candidates:
+        if candidate.exists():
+            sys.path.insert(0, str(candidate))
+            return
 
 
 _ensure_hyper_parallel_importable()

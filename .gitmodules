@@ -1,3 +1,6 @@
 [submodule "recipe"]
 	path = recipe
 	url = https://github.com/verl-project/verl-recipe.git
+[submodule "third_party/hyper-parallel"]
+	path = third_party/hyper-parallel
+	url = https://gitcode.com/mindspore/hyper-parallel.git

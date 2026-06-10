@@ -3,7 +3,9 @@ set -x
 
 # HyperParallel must use its PyTorch platform path.
 export HYPER_PARALLEL_PLATFORM=${HYPER_PARALLEL_PLATFORM:-torch}
-export PYTHONPATH="/root/verl_hyper/hyper-parallel:${PYTHONPATH}"
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+HYPER_PARALLEL_PATH=${HYPER_PARALLEL_PATH:-"${SCRIPT_DIR}/third_party/hyper-parallel"}
+export PYTHONPATH="${HYPER_PARALLEL_PATH}:${PYTHONPATH}"
 export CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
 export WANDB_MODE=${WANDB_MODE:-disabled}
 
